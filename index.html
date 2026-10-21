@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newtonite Swipe</title>
+<link rel="icon" href="newtonite-mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="nt-brand" href="./"><img src="newtonite-mark.png" alt="">NEWTONITE<em>SWIPE</em></a>
+  <nav id="nav" hidden>
+    <a href="#columns" data-view="columns">Columns</a>
+    <a href="#review" data-view="review">Review</a>
+    <a href="#board" data-view="board">Board</a>
+  </nav>
+  <div class="topbar__right"><span id="tally" class="muted"></span></div>
+</header>
+
+<main id="app">
+  <!-- 0. load -->
+  <section id="v-load" class="view container">
+    <span class="kicker">Candidate screening</span>
+    <h1>Swipe through<br>the <em>submissions.</em></h1>
+    <p class="lede muted">Drop the responses spreadsheet. Columns are identified automatically, then each candidate becomes a card: right to accept, left to reject, down to keep as maybe.</p>
+    <label id="drop" class="drop">
+      <input id="file" type="file" accept=".xlsx,.xls,.csv" hidden>
+      <b>Drop .xlsx here</b><span>or click to choose a file. Nothing leaves your browser.</span>
+    </label>
+    <p id="load-err" class="error"></p>
+  </section>
+
+  <!-- 1. columns -->
+  <section id="v-columns" class="view container" hidden>
+    <span class="kicker">Step 1 · Column analysis</span>
+    <h1>What each column <em>is.</em></h1>
+    <p class="lede muted">Detected from header and contents. Fix anything wrong, then start.</p>
+    <div id="cols" class="cols"></div>
+    <div class="actions"><button id="start" class="btn btn--primary">Start reviewing →</button></div>
+  </section>
+
+  <!-- 2. review -->
+  <section id="v-review" class="view" hidden>
+    <div class="stage">
+      <div id="stack" class="stack"></div>
+      <p id="empty" class="empty" hidden>That's everyone. <a href="#board">See the board →</a></p>
+    </div>
+    <div class="deck-bar">
+      <button class="round round--bad" data-act="reject" aria-label="Reject"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button class="round round--warn" data-act="maybe" aria-label="Maybe"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
+      <button class="round round--ok" data-act="accept" aria-label="Accept"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+    </div>
+    <p class="keys muted"><kbd>←</kbd> reject <kbd>↓</kbd> maybe <kbd>→</kbd> accept <kbd>Z</kbd> undo</p>
+    <button id="undo" class="btn btn--ghost undo">Undo</button>
+  </section>
+
+  <!-- 3. board -->
+  <section id="v-board" class="view container" hidden>
+    <span class="kicker">Decisions</span>
+    <h1>The <em>board.</em></h1>
+    <div class="actions">
+      <div id="filters" class="filters"></div>
+      <button id="export" class="btn btn--ghost">Export CSV</button>
+      <button id="reset" class="btn btn--ghost">Reset all</button>
+    </div>
+    <div id="rows" class="rows"></div>
+  </section>
+</main>
+
+<aside id="token-note" class="token-note" hidden>
+  GitHub rate limit hit. <input id="token" placeholder="optional personal access token" spellcheck="false"> <button id="token-save" class="btn btn--ghost">Save</button>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
