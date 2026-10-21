@@ -174,3 +174,6 @@ a.chip:hover { background: var(--nt-blue-wash); border-color: var(--nt-blue); tr
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
 }
+
+.mode { margin-bottom: 14px; padding: 4px 12px; background: var(--bad-bg); color: var(--bad); font-size: 12px; font-weight: 600; letter-spacing: .06em; }
+.mode a { color: inherit; margin-left: 10px; }

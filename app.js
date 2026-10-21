@@ -15,7 +15,7 @@ const ROLES = {
 const THRESH = 110;
 const DECISIONS = { accept: 'Accepted', reject: 'Rejected', maybe: 'Maybe' };
 
-let columns = [], rows = [], cands = [], cursor = 0, allChecks = [];
+let columns = [], rows = [], cands = [], queue = [], cursor = 0, allChecks = [], deckMode = 'all', prev = {};
 let decisions = store.get('decisions', {});
 let filter = 'all';
 
@@ -92,8 +92,16 @@ function buildCands() {
   });
   cands = [...by.values()];
   allChecks = [...new Set(cands.flatMap(c => c.checks))];
-  cursor = Math.max(0, cands.findIndex(c => !decisions[c.id]));
-  if (cands.every(c => decisions[c.id])) cursor = cands.length;
+  setQueue('all');
+}
+// ponytail: 'reject' mode is a second-look pass over red candidates only; accepting/maybe-ing one moves it out of red.
+function setQueue(mode) {
+  deckMode = mode;
+  queue = mode === 'reject' ? cands.filter(c => decisions[c.id] === 'reject') : cands;
+  cursor = mode === 'reject' ? 0 : queue.every(c => decisions[c.id]) ? queue.length : Math.max(0, queue.findIndex(c => !decisions[c.id]));
+  $$('.card').forEach(x => x.remove()); cardEls.clear();
+  $('#mode').hidden = mode !== 'reject';
+  $('#mode b').textContent = queue.length;
 }
 
 /* ---------- 3. GitHub enrichment (public API, cached) ---------- */
@@ -164,7 +172,7 @@ function cardHtml(c) {
 }
 
 function syncStack() {
-  const want = cands.slice(cursor, cursor + 3);
+  const want = queue.slice(cursor, cursor + 3);
   const stack = $('#stack');
   for (const [id, el] of cardEls) if (!want.some(c => c.id === id) && !el.classList.contains('out')) { el.remove(); cardEls.delete(id); }
   want.forEach((c, depth) => {
@@ -192,9 +200,9 @@ async function fillGh(el, c) {
 }
 
 function decide(d) {
-  const c = cands[cursor], el = c && cardEls.get(c.id);
+  const c = queue[cursor], el = c && cardEls.get(c.id);
   if (!el || el.classList.contains('out')) return;
-  decisions[c.id] = d; store.set('decisions', decisions);
+  prev[c.id] = decisions[c.id]; decisions[c.id] = d; store.set('decisions', decisions);
   el.dataset.d = d; el.style.setProperty('--tint', 1);
   $$('.stamp', el).forEach(s => s.style.opacity = '');
   const W = innerWidth * 1.2;
@@ -208,8 +216,10 @@ function decide(d) {
 }
 function undo() {
   if (cursor === 0) return;
-  cursor--; delete decisions[cands[cursor].id]; store.set('decisions', decisions);
-  const old = cardEls.get(cands[cursor].id); if (old) { old.remove(); cardEls.delete(old.dataset.id); }
+  cursor--; const id = queue[cursor].id;
+  if (prev[id]) decisions[id] = prev[id]; else delete decisions[id];
+  store.set('decisions', decisions);
+  const old = cardEls.get(id); if (old) { old.remove(); cardEls.delete(old.dataset.id); }
   syncStack();
 }
 
@@ -238,7 +248,7 @@ const release = e => {
   if (tint >= 1) return decide(dir);
   ['--dx', '--dy', '--rot', '--tint'].forEach((p, i) => el.style.setProperty(p, i < 2 ? '0px' : i === 2 ? '0deg' : 0));
   $$('.stamp', el).forEach(s => s.style.opacity = ''); $('#stack').style.setProperty('--lift', 0);
-  if (decisions[cands[cursor]?.id]) el.style.setProperty('--tint', .4); else delete el.dataset.d;
+  if (decisions[queue[cursor]?.id]) el.style.setProperty('--tint', .4); else delete el.dataset.d;
 };
 addEventListener('pointerup', release); addEventListener('pointercancel', release);
 
@@ -268,14 +278,16 @@ $('#rows').addEventListener('click', e => {
   const i = +row.dataset.i, c = cands[i];
   const set = e.target.closest('[data-set]')?.dataset.set;
   if (set) { decisions[c.id] = set; store.set('decisions', decisions); renderBoard(); tally(); }
-  else if (e.target.closest('[data-open]')) { cursor = i; $$('.card').forEach(x => x.remove()); cardEls.clear(); go('review'); }
+  else if (e.target.closest('[data-open]')) { setQueue('all'); cursor = i; go('review'); }
 });
+$('#rereview').onclick = () => { setQueue('reject'); go('review'); };
+$('#exit-mode').onclick = e => { e.preventDefault(); setQueue('all'); syncStack(); };
 $('#export').onclick = () => {
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const csv = ['Decision,Name,Email,Phone,College,Year,Repo,Live'].concat(cands.map(c => [decisions[c.id] || 'pending', c.name, c.email, c.phone, c.college, c.year, c.repoUrl, c.live.join(' ')].map(q).join(','))).join('\n');
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'decisions.csv' }); a.click();
 };
-$('#reset').onclick = () => { if (confirm('Clear all decisions?')) { decisions = {}; store.set('decisions', decisions); cursor = 0; $$('.card').forEach(x => x.remove()); cardEls.clear(); renderBoard(); tally(); } };
+$('#reset').onclick = () => { if (confirm('Clear all decisions?')) { decisions = {}; store.set('decisions', decisions); setQueue('all'); renderBoard(); tally(); } };
 
 /* ---------- 6. routing + wiring ---------- */
 let currentView = 'load';
